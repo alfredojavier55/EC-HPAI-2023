@@ -27,19 +27,20 @@ library(dplyr);library(lubridate);library(ggplot2); library(scales); library(rea
 #unir 2023
 ```{r}
 #setwd("/home/alfredo/Downloads/AVES2023/")
-setwd("C:/Users/Joha/Desktop/AVES2022/")
-setwd("C:/Users/Joha/Desktop/AVES2023/")
+# setwd("C:/Users/Joha/Desktop/AVES2022/")
+# setwd("C:/Users/Joha/Desktop/AVES2023/")
 
-vge1 <- read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_GAVES2022.xlsx", 
-    skip = 2)
-vge2 <- read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_GAVES2023.xlsx", 
-    skip = 2)
+setwd("/home/alfredo/Dropbox/0.Postdoc/Publications/Avian influenza/git/")
 
-vr1 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_RAVES2022.xlsx", skip = 1)
-vr2 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_RAVES2023.xlsx", skip = 1)
 
-vc1 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_CAVES2022.xlsx", skip = 1)
-vc2 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_CAVES2023.xlsx", skip = 1)
+vge1 <- read_excel("VEO2_GAVES2022.xlsx", skip = 2)
+vge2 <- read_excel("VEO2_GAVES2023.xlsx", skip = 2)
+
+vr1 <- readxl::read_excel("VEO2_RAVES2022.xlsx", skip = 1)
+vr2 <- readxl::read_excel("VEO2_RAVES2023.xlsx", skip = 1)
+
+vc1 <- readxl::read_excel("VEO2_CAVES2022.xlsx", skip = 1)
+vc2 <- readxl::read_excel("VEO2_CAVES2023.xlsx", skip = 1)
 
 ```
 
@@ -48,10 +49,11 @@ vc2 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_CAVES2023.xlsx", 
 # Juntar archivos vigilancia (join-vig) ----
 
 # -- Vigilancia general ----
-v0 <- full_join(vge1, vge2)
-v4 <- full_join (vr1, vr2)
+v0 <- full_join(vge1, vge2) #general
+v4 <- full_join (vr1, vr2) #resultados
+v6 <- full_join(vc1, vc2) #cierre
+
 v5 <- full_join(v0,v4)
-v6 <- full_join(vc1, vc2)
 v1 <- full_join(v5,v6)
 
 colnames(v1)
@@ -164,9 +166,7 @@ v2 %>%
 ```{r}
 # Numero de notificaciones
 v2 %>%
-  group_by(month)%>%
   group_by(especie_final)%>%
-  filter(ano >2020)%>%
   summarise(notifi_geral=length(unique(orden)))%>%
   arrange(desc(notifi_geral))
 
@@ -255,13 +255,13 @@ v3 <- v2 %>%
 ```{r}
 library(RSurveillance)
 
-ap <- ap(v2$pos, v2$total_muestras, type = "wilson", conf = 0.95)
+ap <- ap(v3$pos, v3$total_muestras, type = "wilson", conf = 0.95)
 
-v2$ap <- ap$proportion
-v2$l <- ap$lower
-v2$u <- ap$upper
+v3$ap <- ap$proportion
+v3$l <- ap$lower
+v3$u <- ap$upper
 
-sum(v2$pos)/sum(v2$total_muestras)
+sum(v3$pos)/sum(v3$total_muestras)
 #sum(v2$afetados)/sum(v2$existente)
 
 # View(ap)
