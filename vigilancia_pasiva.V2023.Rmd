@@ -1,7 +1,7 @@
 ---
-title: "Vigilancia_notificaciones_brotes"
-author: "Alfredo Acosta"
-date: "24/02/2023"
+title: "Vigilancia_notificaciones_aves"
+author: "JEST"
+date: "09/06/2023"
 output: html_document
 ---
 
@@ -9,209 +9,128 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Notificaciones y brotes Vigilancia SIZSE
+# Notificaciones y brotes Vigilancia SIZSE AVES
 # V 0.01 
-# Projecto Estimacion de la sensibilidad del sistema de vigilancia epidemiologica PPC
-# Autor Alfredo Acosta PhD
-# alfredoacosta@alumni.usp.br
-# EPIDAT
-# University of Sao Paulo
-# Preventive veterinary medicine department
-# https://github.com/alfredojavier55/Preparing_agro_data
+# Projecto Estimacion de la sensibilidad del sistema de vigilancia epidemiologica AVES
+# Autor JEST
+# johanna.salas83@gmail.com
+# VZS
+# AGROCALIDAD
+# git test
+# 
 
 ```{r}
-library(dplyr);library(lubridate);library(ggplot2); library(scales)
+library(dplyr);library(lubridate);library(ggplot2); library(scales); library(readxl); library(readr)
+
+```
+
+#unir 2023
+```{r}
+#setwd("/home/alfredo/Downloads/AVES2023/")
+setwd("C:/Users/Joha/Desktop/AVES2022/")
+setwd("C:/Users/Joha/Desktop/AVES2023/")
+
+vge1 <- read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_GAVES2022.xlsx", 
+    skip = 2)
+vge2 <- read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_GAVES2023.xlsx", 
+    skip = 2)
+
+vr1 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_RAVES2022.xlsx", skip = 1)
+vr2 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_RAVES2023.xlsx", skip = 1)
+
+vc1 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2022/VEO2_CAVES2022.xlsx", skip = 1)
+vc2 <- readxl::read_excel("C:/Users/Joha/Desktop/AVES2023/VEO2_CAVES2023.xlsx", skip = 1)
 
 ```
 
 
+```{r}
 # Juntar archivos vigilancia (join-vig) ----
 
-```{r}
-setwd("~/Dropbox/0.USP/1 Projeto/Conferir-dados/2021")
-# Colnames correctos ----
-vge0 <- read.csv("Rep_General_EventosSan0.csv", colClasses = "character",encoding = "UTF-8")
-vr0 <- read.csv("Rep_ResultadosGEV0.csv", colClasses = "character",encoding = "UTF-8")
-vc0 <- read.csv("Rep_CierreGEV0.csv", colClasses = "character",encoding = "UTF-8")
-
-# Archivos de general ----
-vge1 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2014.xls")
-vge2 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2015.xls")
-vge3 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2016.xls")
-vge4 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2017.xls")
-vge5 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2018.xls")
-vge6 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2019.xls")
-vge7 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2020.xls")
-vge8 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2021.xls")
-
-vge <- rbind(vge1, vge2, vge3, vge4, vge5, vge6, vge7, vge8)
-# vge1 <- readxl::read_excel("VEPG02_REP_GENERAL_BASICO 2015.xls")
-# colnames(vge) <- vge1[1,]
-
-# colnames(vge0)
-# colnames(vge)
-
-# Reordenar y revisar bien Cristian ----
-vge2 <- vge[,c(1,5:7,9,10,4,8,8,8,11:18,
-              20:24,3,3,27)]
-colnames(vge2)
-# por algo agregaron las columnas y las deberian usar
-# vge <- vge[,c(1,5:7,9,10,4,8,8,8,11:18,
-#               20:24,3,3,27,  2,19,25,26)]
-# 
-# colnames(vge)[27] <- "Alerta"
-
-colnames(vge2) <- colnames(vge0)
-
-vge2 <- cbind(vge2, vge[,c(2,19,25,26)])
-
-# Archivos de resultados ----
-vr1 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2014.xls")
-vr2 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2015.xls")
-vr3 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2016.xls")
-vr4 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2017.xls")
-vr5 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2018.xls")
-vr6 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2019.xls")
-vr7 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2020.xls")
-vr8 <- readxl::read_excel("VEPG02_REP_RESULTADOS 2021.xls")
-
-vr <- rbind(vr1, vr2, vr3, vr4, vr5, vr6, vr7, vr8)
-
-# colnames(vr)
-# colnames(vr2)
-
-vr2 <- vr[,c(1,5:7,9,10,4,8,8,8,11:18,20,21,3,3,27,28,29,33,32,34:39,41,43,44,42)]
-
-colnames(vr2) <- colnames(vr0)
-colnames(vr2)
-
-vr2 <- cbind(vr2, vr[,c(2,19,22,23,24,25,26,30,31,40,45,46)])
-
-# Archivos de cierre ----
-vc1 <- readxl::read_excel("VEPG02_REP_CIERRE 2014.xls")
-vc2 <- readxl::read_excel("VEPG02_REP_CIERRE 2015.xls")
-vc3 <- readxl::read_excel("VEPG02_REP_CIERRE 2016.xls")
-vc4 <- readxl::read_excel("VEPG02_REP_CIERRE 2017.xls")
-vc5 <- readxl::read_excel("VEPG02_REP_CIERRE 2018.xls")
-vc6 <- readxl::read_excel("VEPG02_REP_CIERRE 2019.xls")
-vc7 <- readxl::read_excel("VEPG02_REP_CIERRE 2020.xls")
-vc8 <- readxl::read_excel("VEPG02_REP_CIERRE 2021.xls")
-
-vc <- rbind(vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8)
-# vc1 <- readxl::read_excel("VEPG02_REP_CIERRE 2014.xls")
-# colnames(vc) <- vc1[1,]
-
-# colnames(vc0)
-# colnames(vc)
-
-# Reordenar ----
-vc2 <- vc[,c(1,7:9,11,12,4,10,10,10,13:20,
-            22,23,3,3,5,36,26:35)]
-
-colnames(vc2) <- colnames(vc0)
-
-vc2 <- cbind(vc2, vc[,c(2,6,21,24,25)])
-
-vge2$canton <- vge2$cantón
-vge2$cantón <- NULL
-
-#Banco Resultados de eventos
-vr2$cant_muestras <- as.numeric(vr2$cant_muestras)
-vr2$positivos <- as.numeric(vr2$positivos)
-vr2$negativos <- as.numeric(vr2$negativos)
-vr2$reactivos <- as.numeric(vr2$reactivos)
-# vr2$indeterminados <- as.numeric(vr2$indeterminados)
-vr2$canton <- vr2$cantón
-vr2$cantón <- NULL
-
-# Banco Cierre de eventos
-vc2$existentes <- as.numeric(vc2$existentes)
-vc2$enfermos <- as.numeric(vc2$enfermos)
-vc2$muertos <- as.numeric(vc2$muertos)
-vc2$sacrificad <- as.numeric(vc2$sacrificad)
-vc2$canton <- vc2$cantón
-vc2$cantón <- NULL
-
 # -- Vigilancia general ----
-v0 <- full_join(vc2, vr2)
-v1 <- full_join(v0,vge2)
-
-table(v1$especie)
-# 
-# rm(vge0, vr0, vc0)
-# rm(vc1,vc3,vc4,vc5,vc6,vc7,vc8)
-# rm(vge1,vge3,vge4,vge5,vge6,vge7,vge8)
-# rm(vr1,vr2,vr3,vr4,vr5,vr6,vr7,vr8)
-# rm(vc2, vge2, vr2, vge)
+v0 <- full_join(vge1, vge2)
+v4 <- full_join (vr1, vr2)
+v5 <- full_join(v0,v4)
+v6 <- full_join(vc1, vc2)
+v1 <- full_join(v5,v6)
 
 colnames(v1)
 
-```
-```{r}
-# Anonimizando el documento
-# cambiando cedulas
+v1$...30 <- NULL
 
-length(unique(v1$cedula))
-v1$cedula <- as.character(as.numeric(v1$cedula)+234-98987)
-length(unique(v1$cedula))
-length(unique(v1$propietario))
-
-# Cambiando propietarios
-v1$propietario <- gsub("A","II", v1$propietario)
-v1$propietario <- gsub("E","C(", v1$propietario)
-v1$propietario <- gsub("I","J%%J", v1$propietario)
-v1$propietario <- gsub("O","P", v1$propietario)
-v1$propietario <- gsub("U","P*P", v1$propietario)
-v1$propietario <- gsub("I","JJ", v1$propietario)
-v1$propietario <- gsub("E","P", v1$propietario)
-v1$propietario <- gsub("L","PP", v1$propietario)
-length(unique(v1$propietario))
-length(unique(v1$predio))
-v1$predio <- gsub("A","II", v1$predio)
-v1$predio <- gsub("E","C(", v1$predio)
-v1$predio <- gsub("I","J%%J", v1$predio)
-v1$predio <- gsub("O","P", v1$predio)
-v1$predio <- gsub("U","P*P", v1$predio)
-v1$predio <- gsub("I","JJ", v1$predio)
-v1$predio <- gsub("E","P", v1$predio)
-v1$predio <- gsub("L","PP", v1$predio)
-length(unique(v1$predio))
+colnames(v1)  <- tolower(colnames(v1)) 
+colnames(v1) <- gsub(" ", "_", colnames(v1))
+colnames(v1) <- gsub("\\.", "", colnames(v1))
+colnames(v1) <- gsub("_#", "", colnames(v1))
+colnames(v1) <- gsub("#_", "", colnames(v1))
+colnames(v1) <- gsub("\\?", "", colnames(v1))
+colnames(v1) <- gsub("\\¿", "", colnames(v1))
+colnames(v1) <- gsub("°", "", colnames(v1))
+colnames(v1) <- gsub("__", "_", colnames(v1))
 
 ```
 
-```{r}
-# save(v1, file = "eventos.RDATA")
-
-```
 
 ```{r}
-# Leyendo 
-# cat("\014")
-# load("eventos.RDATA")
+table(v1$det_diagnóstico)
+
+table(v1$prueba_solicitada)
+
+table(v1$reponsable_resultados)
+
+table(v1$`p(+)`)
+
+table(v1$especie_final)
+
 ```
 
 
 ## Ejemplo todas las especies
+##https://rpubs.com/alfredojavier55/rvea2023_v11
+# verificar sizse poblacion
 
 ```{r}
 v2 <- v1 %>%
-  # filter(detalle_diagnóstico == "Peste porcina clásica")%>%
-  # filter(detalle_diagnóstico == "PESTE PORCINA CLÁSICA")%>%
-  group_by(orden, provincia, canton, parroquia, cedula, propietario, semana, 
-           zona,
-           coord_x, coord_y, predio,t_explotación, notificador, 
-           f_1er_enfermo, f_notificación, f_1era_visita, síndrome_presuntivo,
-           patología, especie, edad, f_elaboración, f_ingreso, f_cierre_orden,
-           detalle_diagnóstico,
-           responsable, vacuno, focal, dosis_focal, perifocal, dosis_perifocal, 
-           especie_f, colecta)%>%
-  summarise(existente=sum(existentes, muertos, sacrificad), enfermo=sum(enfermos), mortos=sum(muertos), 
-            sacrifi=sum(sacrificad), afetados=sum(muertos,sacrificad), 
-            pos=sum(positivos), total_muestras=sum(cant_muestras), reactivo=sum(reactivos))
+    filter(det_diagnóstico == "Infección por Virus de Influenza Aviar")%>%
+    group_by(orden, 
+             provincia, 
+             cantón,
+             parroquia, 
+             propietario,
+             semana,
+             utm,
+             coord_x,
+             coord_y, 
+             predio,
+             t_explotación,
+             notificador,
+             f_1_ave_enferma,
+             f_notificación,
+             f_1_visita,
+             síndrome_presuntivo,
+             patología,
+             especie_final,
+             f_elaboración,
+             f_ingreso_sizse,
+             f_cierre,
+             det_diagnóstico,
+             reponsable, 
+             reponsable_resultados,
+             vacunó,
+             focal,
+             dosis_focal,
+             perifocal,
+            dosis_perifocal, colecta)%>%
+  summarise(existente=mean(aves_exist) + mean(aves_sacrif), enfermo=sum(aves_enf), mortos=sum(aves_muert), 
+            sacrifi=sum(aves_sacrif), afetados=sum(aves_muert,aves_sacrif), 
+            pos=sum(`p(+)`, na.rm = TRUE), total_muestras=sum(cant_muest))%>%
+mutate(definitivo=ifelse(pos>=1,"caso", "notifi"))
+
+table(v2$definitivo)
 
 # Agregando ano
-v2$ano <- year(dmy(v2$f_1er_enfermo))
-v2$month <- month(dmy(v2$f_1er_enfermo))
+v2$ano <- year(dmy(v2$f_1_ave_enferma))
+v2$month <- month(dmy(v2$f_1_ave_enferma))
 
 ```
 
@@ -221,11 +140,11 @@ length(unique(v2$orden))
 ```
 
 ```{r}
-v2$f_1er_enfermo <- dmy(v2$f_1er_enfermo)
+v2$f_1_ave_enferma <- dmy(v2$f_1_ave_enferma)
 # Changing to floor date week
-v2$week <- floor_date(v2$f_1er_enfermo, "week")
+v2$week <- floor_date(v2$f_1_ave_enferma, "week")
 # Best visualizations by month
-v2$Month <- floor_date(v2$f_1er_enfermo, "month")
+v2$Month <- floor_date(v2$f_1_ave_enferma, "month")
 
 ```
 
@@ -235,7 +154,7 @@ v2$Month <- floor_date(v2$f_1er_enfermo, "month")
 # Numero de ordenes
 v2 %>%
   group_by(ano)%>%
-  # filter(ano >2020)%>%
+  filter(ano >2020)%>%
   summarise(notifi=length(unique(orden)))
 
 ```
@@ -245,50 +164,156 @@ v2 %>%
 ```{r}
 # Numero de notificaciones
 v2 %>%
-  # group_by(month)%>%
-  group_by(especie_f)%>%
-  filter(ano <2020)%>%
-  filter(ano >2014)%>%
+  group_by(month)%>%
+  group_by(especie_final)%>%
+  filter(ano >2020)%>%
   summarise(notifi_geral=length(unique(orden)))%>%
   arrange(desc(notifi_geral))
 
 ```
-  
 
-## Número de notificaciones por especie alta notificacion
+##8.26, 6.2
+## Filtro de casos
+## ## NO CORRE ESTE CHUNK
+```{r}
+# Número de notificaciones 
+ casos <- v2 %>%
+  # group_by(month)%>%
+  filter(det_diagnóstico == "Infección por Virus de Influenza Aviar")%>%
+  filter(definitivo=="caso")%>%
+  filter(reponsable_resultados=="De la Torre Medranda Euclides José (1309729331)" | reponsable_resultados == "Jarrin Escudero David Alejandro (1719601310)"
+         | reponsable_resultados == "JARRIN ESCUDERO DAVID ALEJANDRO (1719601310)" | reponsable_resultados == "Vaca Larrea María Sol (1715489108)" | reponsable_resultados == "SALAS TORRES JOHANNA ELIZABETH (1716580327)")%>%
+  group_by(ano,orden,reponsable_resultados)%>%
+  summarise(notifi_geral=length(unique(orden)))
+   
+```
 
+
+#Notificaciones
 ```{r}
 # Número de notificaciones por especie alta notificacion
  v2 %>%
   # group_by(month)%>%
-  group_by(ano, especie_f)%>%
-  filter(ano <2020)%>%
-  filter(ano >2013)%>%
-  filter(especie_f=="BOVINOS" | especie_f == "PORCINOS"
-         | especie_f == "OVINOS" | especie_f == "EQUINOS" | especie_f == "ABEJAS")%>%
-  summarise(notifi_geral=length(unique(orden)))%>%
-  arrange(desc(notifi_geral))%>%
-ggplot()+
-  geom_col(aes(ano,notifi_geral), colour="#377EB8")+
-  geom_text(aes(ano, notifi_geral, label=(notifi_geral)), nudge_y = 200)+
-  facet_grid(rows = vars(especie_f))+
-  scale_y_continuous(breaks= pretty_breaks())+
-  labs(y="Notificaciones vigilancia general",
-       x="Año")+
-  theme_minimal() +
-  theme(text = element_text(size = 10))
+  filter(det_diagnóstico == "Infección por Virus de Influenza Aviar")%>%
+  filter(ano >2020)%>%
+  filter(definitivo=="caso")%>%
+  filter(reponsable_resultados=="De la Torre Medranda Euclides José (1309729331)" | reponsable_resultados == "Jarrin Escudero David Alejandro (1719601310)"
+         | reponsable_resultados == "JARRIN ESCUDERO DAVID ALEJANDRO (1719601310)" | reponsable_resultados == "Vaca Larrea María Sol (1715489108)" | reponsable_resultados == "SALAS TORRES JOHANNA ELIZABETH (1716580327)")%>%
+  group_by(ano,orden,reponsable_resultados)%>%
+  summarise(notifi_geral=length(unique(orden)))
+   
+```
+
+# BD 88 lineas 27 brotes + 61 notificaciones
+# 28.06.2023
+```{r}
+v3 <- v2 %>%
+  group_by(orden,
+           provincia,
+           cantón,
+           parroquia,
+           propietario,
+           semana,
+           utm,
+           coord_x, 
+           coord_y, 
+           predio,
+           t_explotación,
+           notificador, 
+           f_1_ave_enferma,
+           f_notificación,
+           f_1_visita,
+           síndrome_presuntivo,
+           patología,
+           # especie,
+           f_elaboración,
+           f_ingreso_sizse,
+           f_cierre,
+           det_diagnóstico,
+           # reponsable,
+           vacunó,
+           focal,
+           dosis_focal,
+           perifocal,
+           dosis_perifocal,
+           colecta) %>% 
+  summarise(existente=mean(existente),
+          enfermo=mean(enfermo),
+          mortos=mean(mortos),
+          sacrifi=mean(sacrifi),
+          afetados=mean(afetados),
+          pos=mean(pos),
+          total_muestras=mean(total_muestras)) %>% 
+    mutate(definitivo2=ifelse(orden %in% casos$orden,"caso", "notifi"))
 
 ```
 
-## Número de notificaciones por especie notificacion intermedia
-```{r}
 
- 
+
+
+#6.2
+```{r}
+library(RSurveillance)
+
+ap <- ap(v2$pos, v2$total_muestras, type = "wilson", conf = 0.95)
+
+v2$ap <- ap$proportion
+v2$l <- ap$lower
+v2$u <- ap$upper
+
+sum(v2$pos)/sum(v2$total_muestras)
+#sum(v2$afetados)/sum(v2$existente)
+
+# View(ap)
+# View(v2)
+```
+
+#HASTA AQUI
+
+
+```{r}
+v2 %>%
+  group_by(ano)%>%
+  summarise(notifi=length(unique(orden)),
+            brotes=sum(definitivo == 'caso'),
+            casos=sum(pos),
+            muestras=sum(total_muestras),
+            poblacion=sum(existente),
+            prev=round(mean(ap, na.rm = TRUE)*100,2),
+            l=round(mean(l, na.rm = TRUE)*100,2),
+            u=round(mean(u, na.rm = TRUE)*100,2))
+```
+
+```{r}
+library(tidyr)
+v2 %>%
+  group_by(definitivo, week)%>%
+  summarise(Casos=sum(pos),
+            Total_muestras=sum(total_muestras),
+            brotes=sum(definitivo == 'caso')) %>%
+  mutate(brotes=ifelse(brotes==0,NA,brotes)) %>% 
+  ggplot()+
+  geom_col(aes(week, Total_muestras), fill="#DEEBF7")+
+  geom_col(aes(week, Casos), fill="#9ECAE1") +
+  geom_point(aes(week, brotes*20), size=0.4)+
+    scale_y_continuous(
+                sec.axis = sec_axis(trans = ~. /20, name="Número de brotes")) + 
+  
+    labs(fill="",
+       x="Semana epidemiologica (2014-2021)",
+       y="Total de animales muestreados por semana")+
+  theme_minimal()
+```
+
+
+
+##HASTA AQUI## Número de notificaciones por especie notificacion intermedia
+```{r}
  v2 %>%
    # group_by(month)%>%
    group_by(ano, especie_f)%>%
-   filter(ano <2020)%>%
-   filter(ano >2013)%>%
+   #filter(ano <2020)%>%
+   filter(ano >2020)%>%
    filter(especie_f =="CAPRINOS" | especie_f == "OVINOS"
         | especie_f == "CUYES" | especie_f == "AVES"
         | especie_f == "PERROS" | especie_f == "CAMELIDOS" | especie_f == "GATOS")%>%
@@ -1960,6 +1985,25 @@ v2 %>%
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 ```{r}
+## Prevalencia aparente
+```{r}
+library(RSurveillance)
 
+ap <- ap(v2$pos, v2$total_muestras, type = "wilson", conf = 0.95)
+
+v2$ap <- ap$proportion
+v2$l <- ap$lower
+v2$u <- ap$upper
+
+sum(v2$afetados)/sum(v2$existente)
+
+v2 %>%
+  group_by(ano)%>%
+  summarise(notifi=length(unique(orden)),
+            brotes=sum(definitivo == 'caso'),
+            casos=sum(pos),
+            muestras=sum(total_muestras),
+            poblacion=sum(existente_cor),
+            prev=round(mean(ap, na.rm = TRUE)*100,2),
 ```
 
