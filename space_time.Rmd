@@ -1,0 +1,515 @@
+---
+title: "Space Time"
+output: html_notebook
+---
+
+# Libraries
+```{r}
+library(sf)
+library(ggplot2)
+```
+
+# WD
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data")
+
+```
+
+
+# Generating centroids
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data")
+
+#Import my shapefile
+ec3 <-st_read(dsn="C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data",layer="nxprovincias")
+ec3 <- subset(ec3, DPA_DESPRO != "GALAPAGOS")
+
+# ec3<-rgdal::readOGR(dsn="~/Dropbox/0.USP/10.2020 II sem/FLI/case-control/bayesian/",layer="nxparroquias")
+ec3 <- st_transform(ec3, crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+trueCentroids <- st_centroid(ec3)
+trueCentroids_df <- as.data.frame(st_coordinates(trueCentroids))
+
+#Add centroids to the shapefile
+ec3$lon <- trueCentroids_df$X
+ec3$lat <- trueCentroids_df$Y
+
+ec <- data.frame(ec3)
+
+
+# Checking locations
+ggplot()+
+  geom_sf(data = ec3, fill= "lightblue", color = "black") +
+           geom_point(data=ec, aes(x=lon, y=lat),
+                      size=1, shape=21, fill="orange", color="black")
+
+ec <- st_drop_geometry(ec3)
+write.csv(ec, file = "nxprovincias.csv", row.names = FALSE)
+
+str(ec)
+
+
+# Parroquias
+library(sf)
+
+# Read the shapefile
+ec3 <- st_read(dsn = "C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data", layer = "nxparroquias")
+
+# Subset to exclude "GALAPAGOS"
+ec3 <- subset(ec3, DPA_DESPRO != "GALAPAGOS")
+
+# Ensure geometries are valid
+if (!all(st_is_valid(ec3))) {
+  ec3 <- st_make_valid(ec3)  # Fix invalid geometries
+}
+
+# Transform to WGS84
+ec3 <- st_transform(ec3, crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+# Calculate centroids
+trueCentroids <- st_centroid(ec3)
+
+# Handle the st_centroid warning
+# Disaggregate multipart geometries if needed
+if (any(st_geometry_type(ec3) == "GEOMETRYCOLLECTION")) {
+  ec3 <- st_collection_extract(ec3, "POLYGON")
+}
+
+# Extract centroid coordinates and add to the shapefile
+trueCentroids_df <- as.data.frame(st_coordinates(trueCentroids))
+ec3$lon <- trueCentroids_df$X
+ec3$lat <- trueCentroids_df$Y
+
+# Convert the sf object to a data frame
+ec <- data.frame(ec3)
+
+# Print summary
+print(head(ec))
+
+
+# Checking locations
+ggplot()+
+  geom_sf(data = ec3, fill= "lightblue", color = "black") +
+  geom_point(data=ec, aes(x=lon, y=lat),
+             size=1, shape=21, fill="orange", color="black")
+
+ec <- st_drop_geometry(ec3)
+write.csv(ec, file = "nxparroquias.csv", row.names = FALSE)
+
+str(ec)
+
+
+
+```
+
+# geo import centroids and id
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data")
+geo <- read.csv(file = "nxparroquias.csv", colClasses = "character")
+length(unique(geo$DPA_PARROQ))
+```
+
+# pop population file
+# Reading censo avicola
+
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data")
+c <- readxl::read_excel("Base Datos_Censo_Avicola-2015-10-21-1.xlsx")
+```
+
+# are all unique ?
+```{r}
+#There are 2206 unique num_cuestionario it was supposed to be unique but not there are 84 duplicated, maybe errors, maybe something else. 
+length(unique(c$NUM_CUESTIONARIO))
+table(duplicated(c$NUM_CUESTIONARIO))
+
+#  Creating a new unique number to avoid the 84 duplicated only 1 found that it was different as well
+table(duplicated(paste(c$IDUBICACION, c$NUM_CUESTIONARIO)))
+
+# Creating a new id for grouping purpouses and avoid complication
+c$id <- seq(1, nrow(c)) 
+```
+
+# grouping censo avicola
+```{r}
+pop <- c %>% 
+  group_by(id=IDUBICACION) %>% 
+  summarise(granjas=n(),
+            poblacion=sum(as.numeric(NUM_POLLOS), 
+                          as.numeric(REP_LIVIANAS),
+                          as.numeric(REP_PESADAS),
+                          as.numeric(PONEDORAS),
+                          as.numeric(PAVOS)))
+length(unique(pop$id))
+table(pop$granjas)
+table(pop$poblacion)
+
+sum(pop$granjas[pop$id_check == "TRUE"]) #there are 2031 farms
+sum(pop$granjas[pop$id_check != "TRUE"]) #there are 259 farms
+
+table(pop$id %in% geo$DPA_PARROQ)
+pop$id_check <- pop$id %in% geo$DPA_PARROQ
+
+# Filtering the ones that match in the geo file
+pop <- pop %>% 
+  filter(id_check == TRUE)
+
+pop <- rbind(pop, c("020155", "1", "0", "NA"))
+pop <- rbind(pop, c("020159", "1", "0", "NA"))
+pop <- rbind(pop, c("020153", "2", "0", "NA"))
+pop <- rbind(pop, c("020157", "1", "0", "NA"))
+pop <- rbind(pop, c("050157", "1", "0", "NA"))
+pop <- rbind(pop, c("050153", "1", "0", "NA"))
+pop <- rbind(pop, c("170250", "1", "0", "NA"))
+pop <- rbind(pop, c("180165", "1", "0", "NA"))
+pop <- rbind(pop, c("180853", "1", "0", "NA"))
+
+pop <- data.frame(pop)
+
+```
+New 
+
+# cases cases file
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data")
+casos <- readxl::read_excel("casos parroquias.xlsx")
+str(casos)
+casos$codigo_parroquia <- substr(casos$codigo_parroquia, 1,6)
+
+ggplot(casos, aes(x=lon_wahis, y=lat_wahis))+
+      geom_point()
+
+plotly::ggplotly(ggplot(casos, aes(x=lon_wahis,y=lat_wahis))+
+      geom_point())
+
+
+```
+
+```{r}
+cases <- casos %>% 
+  group_by(id=codigo_parroquia, date=`Fecha_1er_ave enferma`) %>% 
+  summarise(cases_granjas=n(),
+            cases_aves=sum(as.numeric(`aves afectadas`)))
+
+cases <- data.frame(cases)
+```
+
+#checking ID in geo
+```{r}
+table(cases$id %in% geo$DPA_PARROQ)
+
+cases$check_in_geo <- cases$id %in% geo$DPA_PARROQ
+
+cases <- cases %>%
+  filter(cases$check_in_geo == TRUE)
+
+cases <- data.frame(cases)
+
+cases$check_in_pop <- cases$id %in% pop$id
+table(cases$check_in_pop)
+```
+
+
+# writing csv for sat scan
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/satscan/")
+
+write.csv(pop, file = "pop.csv")
+write.csv(cases, file = "cases.csv")
+write.csv(geo, file = "geo.csv")
+
+```
+
+# You are running SaTScan v10.1.3.
+
+# SaTScan is free, available for download from https://www.satscan.org/.
+# It may be used free of charge as long as proper citations are given
+# to both the SaTScan software and the underlying statistical methodology.
+# 
+# Reading the coordinates file
+# Reading the population file
+# Reading the case file
+# Calculating the expected number of cases
+# Constructing the circles
+# Finding the most likely clusters
+# .... this step will take approximately 9 minutes.
+# .... this step will take approximately 8 minutes more.
+# .... this step will take approximately 5 minutes more.
+# .... this step will take approximately 3 minutes more.
+# Checking the Overlapping Nature of Clusters
+# SaTScan log likelihood ratio for the most likely cluster:   51.56
+# Doing the Monte Carlo replications
+# SaTScan log likelihood ratio for #1 of 999 replications:   10.81
+# SaTScan log likelihood ratio for #2 of 999 replications:    8.33
+# SaTScan log likelihood ratio for #3 of 999 replications:   10.08
+# SaTScan log likelihood ratio for #4 of 999 replications:   10.47
+# .... this step will approximately take at most 22 hours 10 minutes.
+# SaTScan log likelihood ratio for #5 of 999 replications:   13.13
+# SaTScan log likelihood ratio for #6 of 999 replications:   15.95
+# SaTScan log likelihood ratio for #7 of 999 replications:   12.28
+# SaTScan log likelihood ratio for #8 of 999 replications:   11.90
+# SaTScan log likelihood ratio for #9 of 999 replications:    8.78
+# SaTScan log likelihood ratio for #10 of 999 replications:   10.42
+# SaTScan log likelihood ratio for #11 of 999 replications:   13.52
+# SaTScan log likelihood ratio for #12 of 999 replications:   11.96
+# SaTScan log likelihood ratio for #13 of 999 replications:   12.93
+# SaTScan log likelihood ratio for #14 of 999 replications:   10.12
+# SaTScan log likelihood ratio for #15 of 999 replications:   11.25
+# SaTScan log likelihood ratio for #16 of 999 replications:   10.01
+# SaTScan log likelihood ratio for #17 of 999 replications:    8.58
+# SaTScan log likelihood ratio for #18 of 999 replications:    8.87
+# SaTScan log likelihood ratio for #19 of 999 replications:   17.39
+# SaTScan log likelihood ratio for #20 of 999 replications:   12.19
+# SaTScan log likelihood ratio for #21 of 999 replications:   10.80
+# SaTScan log likelihood ratio for #22 of 999 replications:    9.67
+# SaTScan log likelihood ratio for #23 of 999 replications:    8.37
+# SaTScan log likelihood ratio for #24 of 999 replications:   12.81
+# SaTScan log likelihood ratio for #25 of 999 replications:    9.53
+# SaTScan log likelihood ratio for #26 of 999 replications:   11.24
+# SaTScan log likelihood ratio for #27 of 999 replications:    9.90
+# SaTScan log likelihood ratio for #28 of 999 replications:   11.81
+# SaTScan log likelihood ratio for #29 of 999 replications:   15.68
+# SaTScan log likelihood ratio for #30 of 999 replications:   13.02
+# SaTScan log likelihood ratio for #31 of 999 replications:   11.02
+# SaTScan log likelihood ratio for #32 of 999 replications:    9.77
+# SaTScan log likelihood ratio for #33 of 999 replications:    8.26
+# SaTScan log likelihood ratio for #34 of 999 replications:   13.67
+# SaTScan log likelihood ratio for #35 of 999 replications:    9.82
+# SaTScan log likelihood ratio for #36 of 999 replications:    9.04
+# SaTScan log likelihood ratio for #37 of 999 replications:    9.01
+# SaTScan log likelihood ratio for #38 of 999 replications:   15.79
+# SaTScan log likelihood ratio for #39 of 999 replications:   11.37
+# SaTScan log likelihood ratio for #40 of 999 replications:   11.15
+# SaTScan log likelihood ratio for #41 of 999 replications:    8.87
+# SaTScan log likelihood ratio for #42 of 999 replications:   10.32
+# SaTScan log likelihood ratio for #43 of 999 replications:   11.56
+# SaTScan log likelihood ratio for #44 of 999 replications:    9.30
+# SaTScan log likelihood ratio for #45 of 999 replications:    9.92
+# SaTScan log likelihood ratio for #46 of 999 replications:    9.74
+# SaTScan log likelihood ratio for #47 of 999 replications:   11.63
+# SaTScan log likelihood ratio for #48 of 999 replications:   12.92
+# Cancelling job, please wait while execution is interrupted ...
+
+```{r}
+
+```
+
+
+Plotting the clusters
+```{r}
+library(ggmap)
+library(ggspatial)
+library(sf)
+library(ggforce)
+
+# API registration 
+register_stadiamaps(key = "76b5ee9f-672a-4475-95ac-c3e2cbfbb72a")
+
+# Ecuador area  with cluster
+cl <-read_sf("C:/Users/alfredo.acosta/OneDrive - SVA/ASF_Uganda/R/Spatiotemporal/61retrospec_min5locations/results.col.shp")
+
+plot(cl)
+
+# Use the lu map already created
+ec <- ggmap::get_stadiamap(bbox = c(left = -81.5,
+                                    right = -75,
+                                    bottom = -5.1, 
+                                    top = 1.5),
+                                    zoom = 7, #zoom 14 was ok
+                                    maptype = "stamen_terrain")
+ggmap(ec)
+
+ggmap(ec) + 
+  geom_point(data=casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis)), 
+             color = 'red',
+             size= 0.5)
+
+```
+# Read Shapefile 
+```{r}
+# cluster
+cluster_ec <-read_sf("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/satscan/results_space3_granjas.gis.shp")
+
+plot(cluster_ec)
+```
+```{r}
+cluster <- ggmap(ec) +
+    ggforce::stat_circle(aes(x0 = cluster_ec$LOC_LONG[1], 
+                         y0 = cluster_ec$LOC_LAT[1], 
+                         r = 14.04/111), colour="purple", alpha=0.01, fill= "red") + 
+    ggforce::stat_circle(aes(x0 = cluster_ec$LOC_LONG[10], 
+                         y0 = cluster_ec$LOC_LAT[10], 
+                         r = 52.52/111), colour="purple", alpha=0.01, fill= "purple") +
+    ggforce::stat_circle(aes(x0 = cluster_ec$LOC_LONG[626], 
+                         y0 = cluster_ec$LOC_LAT[626], 
+                         r = 18.83/111), colour="purple", alpha=0.01, fill= "green") +
+    ggforce::stat_circle(aes(x0 = cluster_ec$LOC_LONG[660], 
+                         y0 = cluster_ec$LOC_LAT[660], 
+                         r = 22.43/111), colour="purple", alpha=0.01, fill= "yellow") +
+    geom_point(data=casos, aes(x=as.numeric(lon_wahis), 
+                               y=as.numeric(lat_wahis)), 
+             color = 'red',
+             size= 0.5) +
+  labs(x=NULL, y=NULL, fill="Space-time clusters") +
+  scale_fill_manual(values=c("1. RR:13.8 (t=37 days)"="red",
+                             "2. RR:18.6 (t= 5 days)"="purple",
+                             "2. RR:18.6 (t= 5 days)"="green",
+                             "2. RR:18.6 (t= 5 days)"="yellow"
+                             )) +
+  theme(legend.position = "right")
+```
+
+
+```{r}
+cluster_fig <- cluster +
+  annotation_scale(location= "br") +
+  coord_sf(crs = 4326)
+
+
+
+# Export map
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/satscan/")
+
+tiff(filename = "Fig-space-3.tiff", width=13, height=10,
+     units="cm", res=1600,compression = "lzw", pointsize = 12)
+cluster_fig
+dev.off()
+
+
+```
+
+
+
+
+# Kernel heat map
+## general
+```{r}
+# Set sys locale to avoid swedish months
+Sys.setlocale("LC_TIME", "C")
+
+# Now, use the data in your plot
+ec_kernel <- 
+  ggmap(ec) +
+  stat_density_2d(data = casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis), fill = ..level..),
+                  geom = "polygon", alpha = 0.4) +  # Heatmap using density
+  scale_fill_viridis_c() +  # Color scale for heatmap
+    geom_point(data=casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis)), 
+             color = 'red',
+             size= 0.5,
+             alpha=0.5)
+
+  ec_kernel
+
+# limiting the view    
+  # + 
+  # xlim(31.92, 32.1) +  # Adjust x-axis limits
+  # ylim(2.44, 2.6) +    # Adjust y-axis limits
+  # theme_void() +         # Remove background and axis
+
+ec_k <- ec_kernel +
+  annotation_scale(location= "br") +
+  coord_sf(crs = 4326)
+ec_k
+
+# Export map
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/kernel/")
+
+tiff(filename = "Fig-map_kernel.tiff", width=13, height=10,
+     units="cm", res=1600,compression = "lzw", pointsize = 12)
+ec_k
+dev.off()
+
+```
+## Montly seasonality
+```{r}
+Sys.setlocale("LC_TIME", "C")
+
+# generating montly variable to see any kind of temporal aggregation
+casos <- casos %>%
+  mutate(month_mod=month(`Fecha_1er_ave enferma`))
+
+# geneate kernel by month
+ec_kernel <- 
+  ggmap(ec) +
+  stat_density_2d(data = casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis), fill = ..level..),
+                  geom = "polygon", alpha = 0.4) +  # Heatmap using density
+  scale_fill_viridis_c() +  # Color scale for heatmap
+    geom_point(data=casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis)), 
+             color = 'red',
+             size= 0.5) +
+  facet_wrap(
+    ~ month_mod, 
+    nrow = 4, ncol = 4)
+
+  + 
+  xlim(31.92, 32.1) +  # Adjust x-axis limits
+  ylim(2.44, 2.6) +    # Adjust y-axis limits
+  theme_void() +         # Remove background and axis
+  theme(legend.position = "none")
+
+lmk <- lutuk_kernel +
+  annotation_scale() +
+  # annotate("text", label = "Lutuk", y = 2.56, x = 32.05, size = 3.5, colour = "black") +
+  coord_sf(crs = 4326)
+lmk
+# Export map (off)
+# setwd("C:/Users/alfredo.acosta/OneDrive - SVA/ASF_Uganda/Results/Figures/")
+# 
+# tiff(filename = "Fig-map6_kernel.tiff", width=13, height=10,
+#      units="cm", res=1600,compression = "lzw", pointsize = 12)
+# lmk
+# dev.off()
+
+```
+
+
+Semester seasonality
+```{r}
+# Creating a semester variable
+casos <- casos %>%
+  mutate(
+    semester = case_when(
+      month(as.Date(`Fecha_1er_ave enferma`)) %in% 1:6 ~ paste(year(as.Date(`Fecha_1er_ave enferma`)), "1st Semester"),
+      month(as.Date(`Fecha_1er_ave enferma`)) %in% 7:12 ~ paste(year(as.Date(`Fecha_1er_ave enferma`)), "2nd Semester")
+    ),
+    semester_order = case_when(
+      month(as.Date(`Fecha_1er_ave enferma`)) %in% 1:6 ~ year(as.Date(`Fecha_1er_ave enferma`)) + 0.0,
+      month(as.Date(`Fecha_1er_ave enferma`)) %in% 7:12 ~ year(as.Date(`Fecha_1er_ave enferma`)) + 0.5
+    )
+  ) %>%
+  arrange(semester_order) %>% # Arrange data by temporal order
+  mutate(semester = factor(semester, levels = unique(semester))) # Create an ordered factor
+
+Sys.setlocale("LC_TIME", "C")
+
+# geneate kernel by month
+ec_kernel_sem <- 
+  ggmap(ec) +
+  stat_density_2d(data = casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis), fill = ..level..),
+                  geom = "polygon", alpha = 0.4) +  # Heatmap using density
+  scale_fill_viridis_c() +  # Color scale for heatmap
+    geom_point(data=casos, aes(x=as.numeric(lon_wahis), y=as.numeric(lat_wahis)), 
+             color = 'red',
+             size= 0.1) +
+  facet_wrap(
+    ~ semester, 
+    nrow = 2, ncol = 2)
+
+  xlim(-80, -77) +  # Adjust x-axis limits
+  ylim(0.8, -3.2)    # Adjust y-axis limits
+  
+ec_k_sem <- 
+  ec_kernel_sem +
+  annotation_scale(location= "br") +
+  coord_sf(crs = 4326)
+ec_k_sem
+
+# Export map
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/kernel/")
+
+tiff(filename = "Fig-map_kernel_sem.tiff", width=15, height=10,
+     units="cm", res=3600,compression = "lzw", pointsize = 12)
+ec_k_sem
+dev.off()
+
+```
+
