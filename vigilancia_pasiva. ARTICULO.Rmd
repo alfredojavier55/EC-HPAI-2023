@@ -87,7 +87,8 @@ table(v1$especie_final)
 
 #K- tabla de frecuencias
 data(v1); attach(v1); table(det_diagnóstico)
-library(summarytools); data(v1); freq(det_diagnóstico)
+# library(summarytools); 
+# data(v1); freq(det_diagnóstico)
 
 #realizo gráfico barras
 library(ggplot2); data(v1); attach(v1);
@@ -146,9 +147,9 @@ v2 <- v1 %>%
             pos=sum(`p(+)`, na.rm = TRUE), total_muestras=sum(cant_muest))%>%
 mutate(definitivo=ifelse(pos>=1,"caso", "notifi"))
 
-table(v2$definitivo)
-library(rio)
-export (v2, "cantones IA.xlsx")
+# table(v2$definitivo)
+# library(rio)
+# export (v2, "cantones IA.xlsx")
 # Agregando ano
 v2$ano <- year(dmy(v2$f_1_ave_enferma))
 v2$month <- month(dmy(v2$f_1_ave_enferma))
@@ -236,6 +237,7 @@ geom_bar(width=1)+coord_polar("y")
    
 ```
 
+
 # BD 88 lineas 27 brotes + 61 notificaciones
 # 28.06.2023
 ```{r}
@@ -257,7 +259,7 @@ v3 <- v2 %>%
            f_1_visita,
            síndrome_presuntivo,
            patología,
-           # especie,
+           # especie_final,
            f_elaboración,
            f_ingreso_sizse,
            f_cierre,
@@ -281,6 +283,13 @@ v3 <- v2 %>%
 # Cuantos casos y notificaciones se encuentran en la db
 table(v3$definitivo2)
 ```
+
+# Cotejando wahis, sizse 
+```{r}
+v3$definitivo2[v3$orden == 237] <- "notifi"
+
+```
+
 
 # Prevalencia aparente 
 ```{r}
@@ -1947,5 +1956,53 @@ v2 %>%
             muestras=sum(total_muestras),
             poblacion=sum(existente_cor),
             prev=round(mean(ap, na.rm = TRUE)*100,2),
+```
+
+
+#Kernel
+```{r}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/data/")
+
+l <- read_xlsx("Casos IA comparacion base y WAHIS.xlsx")
+
+l$y <- l$Norting
+# l$y <- gsub("-", ".", l$y)
+l$y <- as.numeric(l$y)
+
+l$x <- l$Easting
+# l$x <- gsub("-", ".", l$x)
+l$x <- as.numeric(l$x)
+
+plot(l$x, l$y)
+
+
+lutuk_kernel <- 
+  # ggmap(lu2) +
+  stat_density_2d(data = l, aes(x = x, y = y, fill = ..level..),
+                  geom = "polygon", alpha = 0.4) +  # Heatmap using density
+  scale_fill_viridis_c() +  # Color scale for heatmap
+  geom_point(data = filtered_data, aes(x = x, y = y), size = 0.1, 
+             color = "red") +  # Points on top of heatmap
+  facet_wrap(
+    ~ month_mod, 
+    nrow = 2, ncol = 3,
+    labeller = as_labeller(function(x) {
+      labels <- c("1" = "Dec 2023", "2" = "Jan 2024", "3" = "Feb 2024", 
+                  "4" = "Mar 2024", "5" = "Apr 2024")
+      labels[x]
+    })
+  ) + 
+  xlim(31.92, 32.1) +  # Adjust x-axis limits
+  ylim(2.44, 2.6) +    # Adjust y-axis limits
+  theme_void() +         # Remove background and axis
+  theme(legend.position = "none")
+
+lmk <- lutuk_kernel +
+  annotation_scale() +
+  annotate("text", label = "Lutuk", y = 2.56, x = 32.05, size = 3.5, colour = "black") +
+  coord_sf(crs = 4326)
+
+
+
 ```
 
