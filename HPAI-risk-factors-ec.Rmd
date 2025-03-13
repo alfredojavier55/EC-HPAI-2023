@@ -1,0 +1,300 @@
+---
+title: "HPAI-risk-factors"
+author: "Alfredo Acosta"
+date: "2025-03-06"
+output:
+  html_document: 
+    toc: yes
+    toc_float: true
+    theme: cosmo
+    fig_caption: yes
+    number_sections: yes
+    code_folding: hide
+  word_document: default
+  html_notebook: 
+    toc: yes
+---
+
+# revisar como se impolementa el test de wald para medir la associacion entre variables
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+```{r}
+library(tidyverse); library(lubridate); library(epiDisplay)
+library(dplyr);library(sjmisc); library(ResourceSelection)
+library(modEvA); library(lubridate)
+
+```
+#WD
+```{r include=FALSE}
+setwd("C:/Users/alfredo.acosta/OneDrive - SVA/Papers/HPAI-Ecuador/case-control/Code-case-control/HPAI-risk-factors/")
+v <- readxl::read_excel("db.27.02.25.xlsx")
+v$id <- 1:nrow(v)
+# str(v)
+```
+# Quick analysis
+```{r eval=FALSE, include=FALSE}
+table(v$caso_o_notifi)
+table(v$provincia, v$caso_o_notifi)
+table(v$t_explotación, v$caso_o_notifi)
+table(v$Nuevo_tipo, v$caso_o_notifi)
+table(v$Nuevo_bioseguridad, v$caso_o_notifi)
+table(v$notificador, v$caso_o_notifi)
+
+table(v$Nuevo_dias_entre_enf_notifi, v$caso_o_notifi)
+table(v$`Nuevo_fecha 1raenf_notifi`, v$caso_o_notifi)
+table(v$Nuevo_dias_entre_notifi_visita, v$caso_o_notifi)
+
+table(v$síndrome_presuntivo, v$caso_o_notifi)
+table(v$patología, v$caso_o_notifi)
+table(v$especie_final, v$caso_o_notifi)
+table(v$det_diagnóstico, v$caso_o_notifi)
+table(v$poblacion, v$caso_o_notifi)
+table(round(log(v$poblacion),0), v$caso_o_notifi)
+table(v$Nuevo_tipo_comercio, v$caso_o_notifi)
+table(v$ano, v$caso_o_notifi)
+
+```
+# factors
+```{r}
+v$fcaso <- factor(v$caso_o_notifi, levels = c(1,0), labels = c("Caso", "Control"))
+table(v$fcaso)
+
+```
+
+# Correlation between numeric 
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(v[,c(13,16,25)])
+colnames(v)
+str(v)
+```
+
+# Centrality measures for numeric variables
+```{r}
+v %>% group_by(ano) %>% 
+  dplyr::select(Nuevo_dias_entre_notifi_visita,
+               Nuevo_dias_entre_enf_notifi,
+               poblacion,
+               Log_poblacion) %>% 
+  descr()
+```
+
+# Tipo de explotacion (eliminar)
+```{r}
+table(v$Nuevo_tipo, v$caso_o_notifi)
+v$Nuevo_tipo <- gsub("SILVESTRES", "TRASPATIO", v$Nuevo_tipo)
+v$Nuevo_tipo <- gsub("TRASPATIO", "1TRASPATIO", v$Nuevo_tipo)
+
+v$ftipo <- as.factor(v$Nuevo_tipo)
+
+tabela <- xtabs(~ v$ftipo  + v$fcaso)
+addmargins(tabela)
+round(prop.table(tabela, 1),2)
+
+fit.tipo <- glm(v$fcaso ~ v$ftipo, family = binomial(logit))
+exp(coef(fit.tipo))
+logistic.display(fit.tipo)
+summary(fit.tipo)
+cc(v$fcaso, v$ftipo)
+
+chisq.test(tabela, correct = F)
+
+ftipo <- v %>% group_by(fcaso, ftipo) %>%
+  summarise(Number_of_events=n()) %>%
+  ggplot() +
+  geom_col(aes(ftipo, Number_of_events, fill=fcaso)) + 
+  scale_fill_brewer(palette = "Set2") +
+    # scale_fill_viridis_d(option = "C", direction = -1) +
+  xlab("Tipo de produccion") + 
+  ylab("N eventos sanitarios")
+
+cc(v$fcaso, v$Nuevo_tipo)
+
+```
+
+# Tipo production
+```{r}
+table(v$fcaso, v$Nuevo_tipo_comercio)
+v <- mutate(v, Nuevo_tipo_comercio = ifelse(poblacion <= 86, "TRASPATIO", "INDUSTRIAL"))
+
+v$fprod <- as.factor(v$Nuevo_tipo_comercio)
+
+tabela <- xtabs(~ v$fcaso  + v$fprod)
+addmargins(tabela)
+round(prop.table(tabela, 1),2)
+
+fit.fprod <- glm(v$fcaso ~ v$fprod, family = binomial(logit))
+summary(fit.fprod)
+logistic.display(fit.fprod)
+
+cc(v$fcaso, v$fprod, design =  "case control")
+help(cc)
+
+exp(coef(fit.fprod))
+confint(fit.fprod)
+
+chisq.test(tabela, correct = F)
+
+fprod <- v %>% group_by(fcaso, fprod) %>%
+  summarise(Number_of_events=n()) %>%
+  ggplot() +
+  geom_col(aes(fprod, Number_of_events, fill=fcaso)) + 
+  scale_fill_brewer(palette = "Set2") +
+    # scale_fill_viridis_d(option = "C", direction = -1) +
+  xlab("Tipo de produccion") + 
+  ylab("N eventos sanitarios")
+```
+
+# Bioseguridad
+```{r}
+table(v$fcaso, v$Nuevo_bioseguridad)
+
+v$fbio <- as.factor(v$Nuevo_bioseguridad)
+
+tabela <- xtabs(~ v$fbio  + v$fcaso)
+addmargins(tabela)
+round(prop.table(tabela, 1),2)
+
+fit.bio <- glm(v$fcaso ~ v$fbio, family = binomial(logit))
+summary(fit.bio)
+logistic.display(fit.bio)
+
+cc(v$fcaso, v$fbio, design =  "case control")
+exp(coef(fit.bio))
+confint(fit.bio)
+chisq.test(tabela, correct = F)
+
+fbio <- v %>% group_by(fcaso, fbio) %>%
+  summarise(Number_of_events=n()) %>%
+  ggplot() +
+  geom_col(aes(fbio, Number_of_events, fill=fcaso)) + 
+  scale_fill_brewer(palette = "Set2") +
+    # scale_fill_viridis_d(option = "C", direction = -1) +
+  xlab("Bioseguridad") + 
+  ylab("N eventos sanitarios")
+
+```
+
+# Notificador
+```{r}
+table(v$fcaso, v$notificador)
+v$fnot <- as.factor(v$notificador)
+
+# Reordering reference value
+v$fnot <- gsub("PROPIETARIO", "1PROPIETARIO", v$fnot)
+
+tabela <- xtabs(~ v$fnot  + v$fcaso)
+addmargins(tabela)
+round(prop.table(tabela, 1),2)
+
+fit.not <- glm(v$fcaso ~ v$fnot, family = binomial(logit))
+summary(fit.not)
+
+cc(v$fcaso, v$fnot, design = "case control")
+exp(coef(fit.not))
+confint(fit.not)
+chisq.test(tabela, correct = F)
+
+
+fnot <- v %>% group_by(fcaso, fnot) %>%
+  summarise(Number_of_events=n()) %>%
+  ggplot() +
+  geom_col(aes(fnot, Number_of_events, fill=fcaso)) + 
+  scale_fill_brewer(palette = "Set2") +
+    # scale_fill_viridis_d(option = "C", direction = -1) +
+  xlab("Notificador") + 
+  ylab("N eventos sanitarios")
+
+```
+
+
+# Sindrome presuntivo
+```{r}
+table(v$fcaso, v$síndrome_presuntivo)
+v$fsin <- as.factor(v$síndrome_presuntivo)
+
+# Reordering reference value
+v$fsin <- gsub("Respiratorio Crónico", "Respiratorio", v$fsin)
+v$fsin <- gsub("Respiratorio Agudo", "Respiratorio", v$fsin)
+v$fsin <- gsub("De Cabeza Inchada", "Respiratorio", v$fsin)
+v$fsin <- gsub("De Muerte Subita", "1De Muerte Subita", v$fsin)
+table(v$fcaso, v$fsin)
+
+tabela <- xtabs(~ v$fsin  + v$fcaso)
+addmargins(tabela)
+round(prop.table(tabela, 1),2)
+
+fit.sin <- glm(v$fcaso ~ v$fsin, family = binomial(logit))
+summary(fit.sin)
+
+cc(v$fcaso, v$fsin, design = "case control")
+exp(coef(fit.sin))
+confint(fit.sin)
+chisq.test(tabela, correct = F)
+
+fsin <- v %>% group_by(fcaso, fsin) %>%
+  summarise(Number_of_events=n()) %>%
+  ggplot() +
+  geom_col(aes(fsin, Number_of_events, fill=fcaso)) + 
+  scale_fill_brewer(palette = "Set2") +
+    # scale_fill_viridis_d(option = "C", direction = -1) +
+  xlab("Sindrome presuntivo") + 
+  ylab("N eventos sanitarios")
+
+```
+
+```{r}
+ymd(v$f_1_ave_enferma) - ymd(v$f_notificación)
+
+
+
+```
+
+# Resume of variables
+```{r}
+
+
+library(ggpubr)
+
+arr <- ggarrange(fbio,
+                 fnot,
+                 fsin,
+                 ftipo,
+                 fprod,
+                nrow = 3,
+                ncol = 2,
+          common.legend = TRUE,
+          font.label = list(size = 6, color = "black", family = NULL),
+          font.text = list(size = 6, color = "black", family = NULL),
+          legend = "bottom")
+
+
+arr
+```
+
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
